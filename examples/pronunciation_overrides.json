@@ -1,0 +1,20 @@
+{
+  "voice_b": {
+    "w007": {
+      "lexical_text": "نَافِذَةٌ",
+      "text_sent": "نَافِذَهْ",
+      "letter_map": [
+        "ة",
+        "ه"
+      ]
+    },
+    "w012": {
+      "lexical_text": "وَرْدَةٌ",
+      "text_sent": "وَرْدَهْ",
+      "letter_map": [
+        "ة",
+        "ه"
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "w002/voice_a": [
+    "tanween"
+  ],
+  "w003/voice_b": [
+    "final_vowel"
+  ],
+  "w005/voice_a@1": [
+    "extra_sound",
+    "breath"
+  ],
+  "w008/voice_b": [
+    "letters",
+    "tanween"
+  ],
+  "w010/voice_a": [
+    "final_vowel",
+    "ab_conflict"
+  ]
+}

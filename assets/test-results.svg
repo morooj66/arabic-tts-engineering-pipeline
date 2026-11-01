@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320" role="img" aria-labelledby="title desc">
+  <title id="title">Offline test results</title>
+  <desc id="desc">Thirty-two of thirty-two tests passed in the offline test suite.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#071426"/><stop offset="1" stop-color="#10233f"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" x2="1">
+      <stop offset="0" stop-color="#21c7b7"/><stop offset="1" stop-color="#62e6db"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="760" height="320" rx="28" fill="url(#bg)"/>
+  <rect x="1" y="1" width="758" height="318" rx="27" fill="none" stroke="#25466a"/>
+  <text x="42" y="55" fill="#91a9c5" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600" letter-spacing="2">OFFLINE VERIFICATION</text>
+  <text x="42" y="110" fill="#f4fbff" font-family="Inter,Arial,sans-serif" font-size="40" font-weight="700">32 / 32 tests passing</text>
+  <text x="42" y="145" fill="#9db4ca" font-family="Inter,Arial,sans-serif" font-size="18">Python unittest · temporary state · zero network calls</text>
+  <rect x="42" y="184" width="676" height="18" rx="9" fill="#1b3553"/>
+  <rect x="42" y="184" width="676" height="18" rx="9" fill="url(#bar)" filter="url(#glow)"/>
+  <g fill="#dcecf5" font-family="Inter,Arial,sans-serif" font-size="15">
+    <text x="42" y="250">Preprocessing</text><text x="210" y="250">WAV validation</text><text x="385" y="250">Resume</text><text x="505" y="250">Review gate</text>
+  </g>
+  <g fill="#55d49a">
+    <circle cx="47" cy="278" r="5"/><circle cx="215" cy="278" r="5"/><circle cx="390" cy="278" r="5"/><circle cx="510" cy="278" r="5"/>
+  </g>
+  <text x="718" y="286" fill="#718ca9" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="13">Verified locally</text>
+</svg>
+

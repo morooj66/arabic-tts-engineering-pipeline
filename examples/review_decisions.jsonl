@@ -1,0 +1,5 @@
+{"entry_id": "w001", "voice": "voice_a", "decision": "accept", "note": "clear"}
+{"entry_id": "w001", "voice": "voice_b", "decision": "accept"}
+{"entry_id": "w004", "voice": "voice_b", "decision": "reject", "note": "unclear ending"}
+{"entry_id": "w006", "voice": "voice_a", "decision": "accept"}
+{"entry_id": "w006", "voice": "voice_a", "decision": "recorrect", "note": "changed my mind (supersedes)"}

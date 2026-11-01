@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="420" viewBox="0 0 980 420" role="img" aria-labelledby="t d">
+<title id="t">Two-voice pipeline architecture</title><desc id="d">Entries flow through a pronunciation policy, two synthetic voices, technical checks, a simulated judge, a quality gate and batch guard, then an append-only human review log and delivery rules that export a platform import sheet.</desc>
+<rect width="980" height="420" rx="20" fill="#0b1a2e"/>
+<g font-family="Inter,Arial,sans-serif" font-size="14" fill="#eefcff" text-anchor="middle">
+<g stroke="#21c7b7" fill="#12344a"><rect x="20" y="170" width="110" height="60" rx="10"/><rect x="160" y="170" width="130" height="60" rx="10"/><rect x="320" y="90" width="120" height="50" rx="10"/><rect x="320" y="260" width="120" height="50" rx="10"/><rect x="470" y="170" width="120" height="60" rx="10"/></g>
+<g stroke="#9b8afb" fill="#2b2350"><rect x="620" y="170" width="110" height="60" rx="10"/><rect x="760" y="90" width="200" height="60" rx="10"/><rect x="760" y="260" width="200" height="60" rx="10"/></g>
+<text x="75" y="205">Entries (CSV)</text><text x="225" y="196">Pronunciation</text><text x="225" y="214">policy + letters check</text>
+<text x="380" y="120">Voice A (waqf)</text><text x="380" y="290">Voice B (verbatim)</text>
+<text x="530" y="196">Technical WAV</text><text x="530" y="214">check + judge</text>
+<text x="675" y="196">Gate + guard</text><text x="860" y="116">Append-only review log</text><text x="860" y="134" font-size="12" fill="#9db4ca">decision bound to SHA-256</text>
+<text x="860" y="286">Delivery rules</text><text x="860" y="304" font-size="12" fill="#9db4ca">2 valid voices per word</text>
+<g stroke="#62e6db" stroke-width="2" fill="none"><path d="M130 200H160M290 200L320 115M290 200L320 285M440 115L470 195M440 285L470 205M590 200H620M730 190L760 120M730 210L760 280M860 150V260"/></g>
+<text x="490" y="385" fill="#9db4ca" font-size="13">Isolated takes are kept, never deleted · AUTO_READY is not HUMAN_ACCEPTED · exports use synthetic URLs</text>
+</g></svg>
