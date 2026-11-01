@@ -1,0 +1,12 @@
+const test = require('node:test'), assert = require('node:assert'), E = require('./engine.js');
+const by = (id) => E.simulate(E.SCENARIOS.find((s) => s.id === id));
+test('clean pair is delivered, one human-accepted', () => { const r = by('ready'); assert.equal(r.delivered, true); assert.equal(r.humanAccepted, 1); assert.deepEqual(r.voices.map((v) => v.category), ['HUMAN_ACCEPTED', 'AUTO_READY']); });
+test('hard fault triggers a retake that can pass', () => { const r = by('retry'); assert.equal(r.voices[0].category, 'AUTO_READY'); assert.equal(r.voices[0].steps.filter((s) => s.stage === 'tts' && s.status === 'ok').length, 2); });
+test('persistent soft faults isolate and the pair is incomplete', () => { const r = by('isolated'); assert.equal(r.voices[1].category, 'ISOLATED'); assert.equal(r.delivered, false); });
+test('auto-ready is valid but not approved', () => { const r = by('awaiting'); assert.equal(r.delivered, true); assert.equal(r.humanAccepted, 0); });
+test('a human rejection overrides a passing gate', () => { const r = by('rejected'); assert.equal(r.voices[1].category, 'REJECTED'); assert.equal(r.delivered, false); });
+test('technical failure records nothing', () => { const r = by('technical'); assert.equal(r.voices[1].category, 'NO_RECORDING'); assert.equal(r.delivered, false); });
+test('letter change is blocked before generation', () => { const r = by('blocked'); assert.equal(r.voices[1].category, 'BLOCKED'); assert.ok(!r.voices[1].steps.some((s) => s.stage === 'tts')); });
+test('gate thresholds', () => { assert.equal(E.gate(['final_vowel']).status, 'HOLD'); assert.equal(E.gate(['extra_sound']).status, 'PASS_GATE'); assert.equal(E.gate(['tanween']).hard[0], 'AUDIBLE_TANWEEN'); assert.equal(E.gate([], { technicalOk: false }).status, 'HOLD'); });
+test('every scenario simulates deterministically', () => { for (const s of E.SCENARIOS) assert.deepEqual(E.simulate(s), E.simulate(s)); });
+if (require.main === module) console.log('engine ok');

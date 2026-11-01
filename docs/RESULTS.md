@@ -8,7 +8,7 @@ The original project's counts, costs and timings belong to the originating organ
 ## This repository (synthetic)
 | Check | Result |
 |---|---|
-| Offline unit tests | 32 / 32 pass |
+| Offline tests | 34 Python + 9 JavaScript, all pass |
 | Single-voice demo (`make demo`) | 4 synthetic entries → `READY_FOR_REVIEW`, 0 paid API calls |
 | Two-voice demo (`make demo-two-voice`) | 12 synthetic entries → 6 complete pairs, 6 incomplete; 2 human-accepted, 16 auto-ready, 4 isolated, 2 rejected slots |
 

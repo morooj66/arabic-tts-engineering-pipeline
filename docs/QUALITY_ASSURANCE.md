@@ -8,4 +8,4 @@ Tests cover pausal preprocessing, deterministic audio validation, idempotent rer
 
 
 ## Test scope
-32 offline tests: 6 for the single-voice pipeline and 26 for the two-voice layer (pausal policy, gate, guard, review log, delivery rules, platform export contract, determinism). `make test` runs them with no network and no API key.
+34 Python tests (6 single-voice pipeline, 26 two-voice layer, 2 parity checks) plus 9 JavaScript tests for the interactive explorer's rule engine. A parity test checks the JavaScript gate against the Python gate on every one- and two-fault combination. `make test` runs them with no network and no API key.

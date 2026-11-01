@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Runtime-Standard%20Library-21c7b7?style=flat-square" alt="Standard library only">
   <img src="https://img.shields.io/badge/State-SQLite-8067d8?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/Examples-Synthetic%20%26%20Offline-172b4d?style=flat-square" alt="Synthetic offline examples">
-  <img src="https://img.shields.io/badge/Tests-32%20Passing-21c7b7?style=flat-square" alt="32 tests passing">
+  <img src="https://img.shields.io/badge/Tests-43%20Passing-21c7b7?style=flat-square" alt="43 tests passing">
 </p>
 
 <p align="center">
@@ -70,14 +70,15 @@ Components, stage contracts and the reasoning behind each decision — including
 | **Production** | Automated evaluation | Gemini Judge — two passes (A: what was heard, B: yes/no questions), audio-only input |
 | **Production** | Orchestration & state | Python, SQLite (append-only tables enforced by triggers), Node.js request builders |
 | **Production** | Quality control | Rule-based quality gate, repeated-error guard in completion mode, classified retry router |
-| **Legacy** | Earlier automation | n8n workflow with `gemini-2.5-flash-preview-tts` — superseded by the Python pipeline |
+| **Production** | Storage & delivery | Separate authorization-gated upload tool: conditional writes (no overwrite), canary first, size / MD5 / SHA-256 verification |
+| **Legacy** | Earlier automation | n8n workflow with `gemini-2.5-flash-preview-tts`; uploaded files automatically as it generated them — superseded by the Python pipeline |
 | **Experimental** | Other voices & settings | Other male voices and prompt variants (superseded by Charon); temperature / seed controls on Kore (no stability gain); forced alignment (excluded from evaluation) |
 
 No comparison between TTS providers was run or is claimed. This repository itself calls no provider: it uses the Python standard library, SQLite and a deterministic tone.
 
 ## 5. Engineering Journey
 
-1. **Workflow automation (n8n).** A chunked read → TTS → upload → write-back workflow gave a first deliverable but no evaluation, no per-word text policy and no per-voice partial retry.
+1. **Workflow automation (n8n).** A chunked read → TTS → automatic upload → write-back workflow gave a first deliverable but no evaluation, no per-word text policy and no per-voice partial retry.
 2. **Python pipeline.** Resume, unique attempts per (entry, voice), pinned configurations that stop a run on mismatch, caps, and tests.
 3. **Model and voice selection.** The newer Gemini TTS model; several male voices and prompt variants tried and superseded; Charon adopted with every other setting held identical; Kore frozen.
 4. **Text policy.** Blind listening showed the end-of-word problem is best fixed in the *input* (pausal form), not the prompt.
@@ -94,6 +95,7 @@ No comparison between TTS providers was run or is claimed. This repository itsel
 | A stop rule that blocked valid work | Completion mode | §4.3 |
 | New takes replacing approved ones | Byte-identity checks, unique attempts, append-only store, SHA-256-bound decisions | §4.4 |
 | Live links that point to the wrong audio | Verify by size, ETag/MD5 and SHA-256, not by URL | §4.5 |
+| Overwriting or auto-uploading reviewed audio | Upload as a separate authorized stage: conditional writes, canary, post-upload verification | §4.6 · [n8n vs Python](docs/ARCHITECTURE.md) |
 
 ## 7. Quality Assurance & Evaluation
 
@@ -103,13 +105,19 @@ Layered and separable: technical WAV checks → judge passes → quality gate �
 
 Production figures of the originating organization are not published. Descriptively: the private project delivered complete two-voice words only, kept *human-accepted* apart from *automatically ready* recordings, and verified its final import file against the live objects. **Production completion is not human approval.**
 
-For this repository's **synthetic** suite: 32 of 32 offline tests pass, and the two-voice demo reproduces every branch (retry, isolation, human accept/reject, incomplete pair). These results concern the demo only. Details: [`docs/RESULTS.md`](docs/RESULTS.md).
+For this repository's **synthetic** suite: 34 Python and 9 JavaScript offline tests pass, and the two-voice demo reproduces every branch (retry, isolation, human accept/reject, incomplete pair). These results concern the demo only. Details: [`docs/RESULTS.md`](docs/RESULTS.md).
 
 ## 9. Synthetic Demo
 
+### Interactive Pipeline Explorer
+
+A zero-dependency HTML/CSS/JavaScript page: click each stage (Arabic Input → Text Policy → TTS Generation → Audio Validation → Automated Evaluation → Human Review → Delivery) to see its purpose and engineering decisions, then step through seven synthetic scenarios (ready for delivery, gate failure and retake, isolation, awaiting the reviewer, reviewer rejection, technical failure, policy block). The simulator applies the same rules as the reference code — a parity test checks it against the Python gate. **It is a Synthetic Interactive Simulation: no Gemini call, no audio, no network.** Open [`docs/interactive-demo/index.html`](docs/interactive-demo/index.html) locally (clone, then open the file in a browser).
+
+### Command-line demos
+
 ```bash
 git clone https://github.com/morooj66/arabic-tts-engineering-pipeline.git && cd arabic-tts-engineering-pipeline
-make test                 # 32 offline tests
+make test                 # 34 Python tests + 9 JavaScript rule tests
 make demo                 # single voice: ingest → mock TTS → WAV checks → review queue
 make demo-two-voice       # policy → simulated judge → gate → guard → review log → delivery rules
 ```
@@ -125,7 +133,7 @@ The two-voice demo processes 12 synthetic entries with injected faults and write
 | [Case study](docs/CASE_STUDY.md) | Journey, experiments, challenges, decisions, lessons — with evidence and limits |
 | [Architecture & decisions](docs/ARCHITECTURE.md) | Mermaid flow, stage contracts, Production / Experimental / Legacy |
 | [Results](docs/RESULTS.md) | What is and is not claimed |
-| [Workflow](docs/WORKFLOW.md) · [Demo](docs/DEMO.md) | Status transitions; reproducible runs |
+| [Interactive explorer](docs/interactive-demo/index.html) · [Workflow](docs/WORKFLOW.md) · [Demo](docs/DEMO.md) | Status transitions; reproducible runs |
 | [Quality assurance](docs/QUALITY_ASSURANCE.md) | Checks, test scope, limits |
 | [Public re-implementation](docs/PUBLIC_REIMPLEMENTATION.md) | Retained, simplified and omitted |
 

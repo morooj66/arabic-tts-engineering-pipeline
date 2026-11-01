@@ -44,6 +44,31 @@ flowchart LR
 
 Stage contract: *generation* never reads QA or review data; the *judge* sees audio only; the *decision* stage reads stage outputs and **never writes an approval**; *human review* is the only path to "human accepted".
 
+### Which path did what: n8n (legacy) vs Python (production)
+
+Not every step existed in both paths. This table is taken from each path's own code and documentation.
+
+| Step | n8n workflow (legacy) | Python pipeline (production) |
+|---|---|---|
+| Read the entries | Spreadsheet read in bounded chunks; one entry at a time | Workbook-derived inventory; a batch planner selects eligible entries |
+| Text processing | None beyond trimming the text; instructions in the prompt | Waqf / verbatim policies, per-word exceptions, letters-preserved check |
+| TTS generation | `gemini-2.5-flash-preview-tts`, `generateContent`, male then female, 4 tries with a 3 s wait | `gemini-3.8-flash-tts`; Charon via the Interactions API, Kore via `generateContent`; pinned configs; one attempt per key, bounded retakes |
+| Audio checks | Decode and format validation; failure status recorded | L0 container/format and L1 acoustic checks |
+| Upload to object storage | **Automatic**: an S3 node in the workflow writes each file to a deterministic key `<prefix>/<entry>/gemini/<gender>/…` | **Not part of generation.** A separate, authorization-gated tool uploads reviewed or approved files (see below) |
+| Upload verification | No post-upload verification documented | Size and ETag/MD5 via `HEAD`, plus an anonymous read compared by SHA-256 |
+| Save links, ids and status | Results sheet with per-voice stage statuses (e.g. input invalid, audio validation failed, upload failed) | SQLite state and events; links follow the same deterministic key layout and are written to delivery workbooks |
+| Network / upload errors | Retry on the TTS call; upload errors continue and are recorded; a rerun retries entries not yet successful (both voices retried together — a documented trade-off) | Classified retry router for generation; the upload tool stops at the first failure and never overwrites |
+| Resume | Skips entries already uploaded and recorded | Each stage resumes from recorded work; a lost-metadata WAV is adopted; `STOP` file and hard caps |
+| Automated evaluation, gate, human review, approved-recording protection | — | Yes (Judge, gate, guard, append-only review, byte-identity checks) |
+| Delivery files | Results sheet | Two-voice delivery workbooks verified against live objects |
+
+### Storage and upload (Python era)
+- **Authorization.** Uploads are a separate stage. Every command is a dry run unless an explicit flag and an exact confirmation phrase (derived from the manifest) are given.
+- **No overwrite.** Each object is written with a conditional write (`If-None-Match: *`) and a SHA-256 checksum; if a key already exists the run refuses. Keys are restricted to the intended prefix.
+- **Canary first.** One object is written and verified before the rest; the first failure stops the run.
+- **Verification.** For each object: size and ETag/MD5 from `HEAD`, then an anonymous `GET` whose SHA-256 must equal the local file. Final delivery files were verified the same way and recorded with a progress log, and the import workbook was checked row by row against the live objects.
+- **Limits.** There is no automatic upload retry; a failed batch is resumed deliberately.
+
 ### Production, Experimental, Legacy
 | Status | Components |
 |---|---|

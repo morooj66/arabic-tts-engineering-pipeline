@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pipeline Explorer — Synthetic Simulation</title>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--fg:#14213d;--mut:#5b6b82;--line:#d7dee8;--acc:#0b6e69;--ok:#1b7a3d;--warn:#a86400;--bad:#b3261e;--pend:#5b4bb7}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1a2e;--card:#10233f;--fg:#e8f1fa;--mut:#9db4ca;--line:#25466a;--acc:#62e6db;--ok:#55d49a;--warn:#f0b35a;--bad:#ff8a80;--pend:#b9a8ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px}h1{font-size:1.45rem;margin:.2rem 0}h2{font-size:1.05rem;margin:0 0 .4rem}
+.banner{border:2px solid var(--warn);border-radius:10px;padding:10px 14px;background:rgba(240,179,90,.12);margin:12px 0}
+.rail{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:14px 0}
+.rail button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 4px;cursor:pointer;min-height:54px}
+.rail button[aria-pressed=true]{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+.rail small{display:block;color:var(--mut);font-size:.72rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+ul{padding-left:1.2rem;margin:.3rem 0}a{color:var(--acc)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}select,button.act{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+button.act{cursor:pointer;border-color:var(--acc)}button.act:disabled{opacity:.4;cursor:default}
+.voices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.step{border-inline-start:4px solid var(--line);padding:4px 8px;margin:6px 0;font-size:.92rem}
+.step.ok{border-color:var(--ok)}.step.fail,.step.failed,.step.blocked,.step.isolated{border-color:var(--bad)}.step.hold,.step.retry{border-color:var(--warn)}.step.pending{border-color:var(--pend)}
+.step b{text-transform:uppercase;font-size:.7rem;letter-spacing:.05em;color:var(--mut);display:block}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.8rem;border:1px solid currentColor}
+.t-HUMAN_ACCEPTED{color:var(--ok)}.t-AUTO_READY{color:var(--pend)}.t-ISOLATED,.t-BLOCKED,.t-REJECTED,.t-NO_RECORDING{color:var(--bad)}
+.result{font-weight:600}.result.good{color:var(--ok)}.result.bad{color:var(--bad)}
+.arab{font-size:1.4rem;direction:rtl;text-align:center}
+@media(max-width:720px){.rail{grid-template-columns:repeat(2,1fr)}.voices{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<h1>Pipeline Explorer</h1>
+<div class="banner" role="note"><b>Synthetic Interactive Simulation.</b> No Gemini call is made, no audio is generated or played, nothing leaves your browser. Words, ids and outcomes are invented; the rules are a port of this repository's synthetic reference code (gate, guard, delivery), not production data or the production system.</div>
+
+<nav class="rail" id="rail" aria-label="Pipeline stages"></nav>
+<section class="card" id="stage" aria-live="polite"></section>
+
+<section class="card">
+  <h2>Scenario simulator</h2>
+  <div class="row"><label for="sc">Scenario</label><select id="sc"></select>
+  <button class="act" id="next">Next step</button><button class="act" id="all">Run all</button><button class="act" id="reset">Reset</button></div>
+  <p id="blurb"></p>
+  <p class="arab" id="lemma" lang="ar"></p>
+  <div class="voices"><div><h2>Voice A (waqf policy)</h2><div id="va"></div></div><div><h2>Voice B (verbatim policy)</h2><div id="vb"></div></div></div>
+  <p class="result" id="outcome"></p>
+</section>
+
+<p>Rules mirrored here: bounded attempts (2), hard faults block, soft risks add weighted points (pass if score ≤ 2), isolated recordings are kept, a human decision overrides the gate, auto-ready is <em>not</em> approved, and a word is delivered only when both voices are valid. See the <a href="https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/CASE_STUDY.md">case study</a> and <a href="https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/ARCHITECTURE.md">architecture</a>.</p>
+</main>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body></html>

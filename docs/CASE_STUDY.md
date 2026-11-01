@@ -73,6 +73,13 @@ Each challenge is written as problem → discovery → options → decision → 
 - **Implemented.** A 24-check verifier: template identity, key uniqueness, URL form, local file validity, **size, ETag/MD5 and SHA-256 of live objects equal the selected local recording**.
 - **Remaining.** The importer's behaviour for pre-existing keys is unconfirmed; the file is intended for a new, independent project.
 
+### 4.6 Putting files into object storage safely
+- **Problem.** The first workflow uploaded files automatically as they were generated; for reviewed and approved audio, an automatic or overwriting upload could replace something a person had accepted.
+- **Options.** Keep the upload inside generation (n8n style); or separate it from generation and make it an authorized step.
+- **Decision.** In the Python era, generation never uploads. A separate tool is dry-run by default, needs an explicit flag plus a confirmation phrase derived from the manifest, writes with conditional puts (no overwrite) and a SHA-256 checksum, uploads one canary first, and stops at the first failure.
+- **Verification.** After each object: size and ETag/MD5 from `HEAD`, then an anonymous read whose SHA-256 must match the local file; the import workbook was later checked row by row against the live objects.
+- **Remaining.** No automatic upload retry; a batch is resumed deliberately. The upload tool for the final delivery batch was a one-off with a progress log.
+
 ## 5. Key Technical Decisions
 
 | Decision | Reason (from the record) |
@@ -115,7 +122,7 @@ Production figures belong to the originating organization and are not published 
 
 **Production completion is not human approval.** Delivered recordings include some that only passed automated checks.
 
-Results of this repository's own **synthetic** tests and demo (not production data): 32 offline tests pass; the two-voice demo yields 6 complete and 6 incomplete words out of 12 synthetic entries, with injected faults producing isolated and rejected slots.
+Results of this repository's own **synthetic** tests and demo (not production data): 34 Python and 9 JavaScript offline tests pass; the two-voice demo yields 6 complete and 6 incomplete words out of 12 synthetic entries, with injected faults producing isolated and rejected slots.
 
 ## 11. Engineering Contribution & Lessons Learned
 

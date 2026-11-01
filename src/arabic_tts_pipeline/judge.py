@@ -26,6 +26,11 @@ class Evidence:
     b: PassB
     injected: tuple[str, ...] = field(default_factory=tuple)      # kept for transparency in reports; a real judge has no such field
 
+def _drop_last_letter(text: str) -> str:
+    i = len(text)
+    while i > 0 and strip_marks(text[i - 1]) == "": i -= 1       # skip trailing marks
+    return text[:i - 1] if i > 0 else text
+
 class MockJudge:
     def __init__(self, faults: dict[str, list[str]] | None = None):
         self.faults = faults or {}
@@ -39,7 +44,9 @@ class MockJudge:
         heard, extra = text_sent, ()
         if "tanween" in faults: final, heard = "nasal_tanween", text_sent + "ٌ"
         if "final_vowel" in faults: final, heard = "short_vowel", text_sent.rstrip(SUKUN) + "َ"
-        if "letters" in faults: heard = heard.replace(bare[0], "س", 1) if bare else heard; heard = heard[:-1] if len(heard) > 3 and "tanween" not in faults else heard
+        if "letters" in faults:                                      # two letters differ: the first letter is replaced and the last letter is lost
+            heard = heard.replace(bare[0], "س", 1) if bare else heard
+            if "tanween" not in faults and len(bare) > 2: heard = _drop_last_letter(heard)
         if "extra_sound" in faults: extra = ("breath@end",)
         if "breath" in faults: final = "breath_or_h"
         a = PassA(heard, final, extra)
