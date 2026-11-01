@@ -34,7 +34,7 @@
 | Area | What was designed | Where to look |
 |---|---|---|
 | Arabic text policy | Pausal (waqf) vs verbatim text per voice; narrow per-word overrides; a *letters-preserved* check | [`pausal.py`](src/arabic_tts_pipeline/pausal.py) |
-| Production pipeline | Python orchestrator, SQLite state, bounded batches, pinned configs, hard cost caps, classified retry, resume | [`pipeline.py`](src/arabic_tts_pipeline/pipeline.py), [`state.py`](src/arabic_tts_pipeline/state.py) |
+| Production pipeline | Python orchestrator, SQLite state, bounded batches, pinned configs, hard cost caps, classified failures with authorized retakes, resume | [`pipeline.py`](src/arabic_tts_pipeline/pipeline.py), [`state.py`](src/arabic_tts_pipeline/state.py) |
 | Automated evaluation | Two-pass audio judge (what was heard / targeted yes-no), evidence only | [`judge.py`](src/arabic_tts_pipeline/judge.py) |
 | Quality gate | Hard faults block, weighted soft risks, frozen threshold; failures isolated, never deleted | [`gate.py`](src/arabic_tts_pipeline/gate.py) |
 | Batch guard | Repeated-error monitor that evolved from *stop on trip* to *advisory* "completion mode" | [`guard.py`](src/arabic_tts_pipeline/guard.py) |
@@ -53,8 +53,8 @@ flowchart LR
     D --> E["Automated evaluation<br/>judge A/B → gate"]
     E --> F["Human review<br/>append-only decisions"]
     F --> G["Delivery<br/>two-voice rule · identity checks"]
-    D -. "classified retry" .-> C
     E -. "HOLD → isolated" .-> F
+    F -. "planned, authorized retake" .-> C
     H["Batch guard (advisory)"] -.-> C
 ```
 
@@ -69,7 +69,7 @@ Components, stage contracts and the reasoning behind each decision — including
 | **Production** | Female voice | **Kore** (prebuilt voice), `generateContent`, text sent verbatim |
 | **Production** | Automated evaluation | Gemini Judge — two passes (A: what was heard, B: yes/no questions), audio-only input |
 | **Production** | Orchestration & state | Python, SQLite (append-only tables enforced by triggers), Node.js request builders |
-| **Production** | Quality control | Rule-based quality gate, repeated-error guard in completion mode, classified retry router |
+| **Production** | Quality control | Rule-based quality gate, repeated-error guard in completion mode, failure router (proposes retakes; a person authorizes them) |
 | **Production** | Storage & delivery | Separate authorization-gated upload tool: conditional writes (no overwrite), canary first, size / MD5 / SHA-256 verification |
 | **Legacy** | Earlier automation | n8n workflow with `gemini-2.5-flash-preview-tts`; uploaded files automatically as it generated them — superseded by the Python pipeline |
 | **Experimental** | Other voices & settings | Other male voices and prompt variants (superseded by Charon); temperature / seed controls on Kore (no stability gain); forced alignment (excluded from evaluation) |
@@ -105,7 +105,7 @@ Layered and separable: technical WAV checks → judge passes → quality gate �
 
 Production figures of the originating organization are not published. Descriptively: the private project delivered complete two-voice words only, kept *human-accepted* apart from *automatically ready* recordings, and verified its final import file against the live objects. **Production completion is not human approval.**
 
-For this repository's **synthetic** suite: 34 Python and 9 JavaScript offline tests pass, and the two-voice demo reproduces every branch (retry, isolation, human accept/reject, incomplete pair). These results concern the demo only. Details: [`docs/RESULTS.md`](docs/RESULTS.md).
+For this repository's **synthetic** suite: 34 Python and 9 JavaScript offline tests pass, and the two-voice demo reproduces every branch (retake, isolation, human accept/reject, incomplete pair; the demo automates the retake that production leaves to a person). These results concern the demo only. Details: [`docs/RESULTS.md`](docs/RESULTS.md).
 
 ## 9. Synthetic Demo
 

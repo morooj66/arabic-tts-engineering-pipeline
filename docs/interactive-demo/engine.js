@@ -55,7 +55,7 @@
       const technicalOk = at.technicalOk !== false;
       if (!technicalOk) {
         add('validation', 'fail', 'Attempt ' + n + ': technical check failed (L0 / format).');
-        if (n < MAX_ATTEMPTS) { add('tts', 'retry', 'Retryable failure: bounded retry.'); continue; }
+        if (n < MAX_ATTEMPTS) { add('tts', 'retry', 'Retryable failure (simulation shortcut: in production a retake is planned and authorized separately).'); continue; }
         add('validation', 'failed', 'Attempts exhausted: FAILED, nothing recorded.'); break;
       }
       add('validation', 'ok', 'Attempt ' + n + ': technical check passed.');
@@ -67,7 +67,7 @@
       }
       add('evaluation', 'hold', 'Judge A/B + gate: HOLD (' + why + '; score ' + g.score + ').');
       slot = { blocked: false, recorded: true, gate: 'HOLD' };
-      if (n < MAX_ATTEMPTS) add('tts', 'retry', 'Bounded retake allowed.'); else add('evaluation', 'isolated', 'No passing take: the recording is ISOLATED (kept, never deleted, not retried automatically).');
+      if (n < MAX_ATTEMPTS) add('tts', 'retry', 'Retake (simulation shortcut: in production a person plans and authorizes it).'); else add('evaluation', 'isolated', 'No passing take: the recording is ISOLATED (kept, never deleted, not retried automatically).');
     }
     const category = categorize(slot, cfg.review || null);
     if (slot.recorded) {

@@ -3,7 +3,7 @@
 ## Patterns retained
 
 - stable entry identifiers and stateful resume;
-- bounded batches and bounded retry attempts;
+- bounded batches and bounded retry attempts (in the reference code the retry is automatic; in the private project a retake was planned and authorized by a person);
 - preprocessing before generation;
 - technical WAV checks before human review;
 - explicit review decisions and non-approval by default;

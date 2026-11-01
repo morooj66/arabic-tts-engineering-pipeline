@@ -45,7 +45,7 @@ button.act{cursor:pointer;border-color:var(--acc)}button.act:disabled{opacity:.4
   <p class="result" id="outcome"></p>
 </section>
 
-<p>Rules mirrored here: bounded attempts (2), hard faults block, soft risks add weighted points (pass if score ≤ 2), isolated recordings are kept, a human decision overrides the gate, auto-ready is <em>not</em> approved, and a word is delivered only when both voices are valid. See the <a href="https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/CASE_STUDY.md">case study</a> and <a href="https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/ARCHITECTURE.md">architecture</a>.</p>
+<p>Rules mirrored here: bounded attempts (2), hard faults block, soft risks add weighted points (pass if score ≤ 2), isolated recordings are kept, a human decision overrides the gate, auto-ready is <em>not</em> approved, and a word is delivered only when both voices are valid. The automatic retake is a simulation shortcut: in production a person plans and authorizes retakes. See the <a href="https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/CASE_STUDY.md">case study</a> and <a href="https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/ARCHITECTURE.md">architecture</a>.</p>
 </main>
 <script src="engine.js"></script>
 <script src="app.js"></script>

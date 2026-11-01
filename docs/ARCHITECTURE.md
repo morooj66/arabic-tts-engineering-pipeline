@@ -21,12 +21,12 @@ flowchart LR
     subgraph AV["3 · Audio validation"]
       L0["L0 container / format"] --> L1["L1 acoustic flags"]
     end
-    AV -- fail --> RT["Classified failure router<br/>(bounded retake or park)"] --> GEN
     AV --> AE
     subgraph AE["4 · Automated evaluation"]
       JA["Judge pass A<br/>what was heard"] --> JB["Judge pass B<br/>targeted yes/no"] --> GATE["Rule-based gate<br/>hard faults · soft score"]
     end
     GATE -- HOLD --> ISO["Isolated (kept, never deleted)"]
+    ISO -. "failure router proposes" .-> RT["Retake: planned and<br/>authorized by a person"] -.-> GEN
     GATE -- PASS_GATE --> AR["Auto-ready<br/>(evidence, not approval)"]
     ISO --> HR
     AR --> HR
@@ -36,7 +36,7 @@ flowchart LR
     DEC --> DL
     AR -- "delivered as auto-ready" --> DL
     subgraph DL["6 · Delivery"]
-      RULE["Two-voice rule"] --> EXP["Platform export (7 columns)"] --> VER["Identity verification<br/>size · MD5/ETag · SHA-256"]
+      RULE["Two-voice rule"] --> EXP["Platform export (7 columns)"] --> UP["Upload tool<br/>(separate, authorized, no overwrite)"] --> VER["Identity verification<br/>size · MD5/ETag · SHA-256"]
     end
     GUARD["Batch guard<br/>(advisory; technical stops only)"] -.-> GEN
     GUARD -.-> AE
@@ -55,12 +55,26 @@ Not every step existed in both paths. This table is taken from each path's own c
 | TTS generation | `gemini-2.5-flash-preview-tts`, `generateContent`, male then female, 4 tries with a 3 s wait | `gemini-3.8-flash-tts`; Charon via the Interactions API, Kore via `generateContent`; pinned configs; one attempt per key, bounded retakes |
 | Audio checks | Decode and format validation; failure status recorded | L0 container/format and L1 acoustic checks |
 | Upload to object storage | **Automatic**: an S3 node in the workflow writes each file to a deterministic key `<prefix>/<entry>/gemini/<gender>/…` | **Not part of generation.** A separate, authorization-gated tool uploads reviewed or approved files (see below) |
-| Upload verification | No post-upload verification documented | Size and ETag/MD5 via `HEAD`, plus an anonymous read compared by SHA-256 |
+| Upload verification | No post-upload verification documented | Size and ETag/MD5 via `HEAD`; the delivery tool also compares an anonymous read by SHA-256 |
 | Save links, ids and status | Results sheet with per-voice stage statuses (e.g. input invalid, audio validation failed, upload failed) | SQLite state and events; links follow the same deterministic key layout and are written to delivery workbooks |
-| Network / upload errors | Retry on the TTS call; upload errors continue and are recorded; a rerun retries entries not yet successful (both voices retried together — a documented trade-off) | Classified retry router for generation; the upload tool stops at the first failure and never overwrites |
+| Network / API errors | Retry on the TTS call (4 tries); upload errors continue and are recorded; a rerun retries entries not yet successful (both voices retried together — a documented trade-off) | **No automatic API retry**: one attempt per key; the run aborts after repeated failures, on authentication / rate-limit errors, or at the cost cap. Failed words are retaken only through a planned, authorized retake; interrupted batches are resumed deliberately. The upload tool stops at the first failure and never overwrites |
 | Resume | Skips entries already uploaded and recorded | Each stage resumes from recorded work; a lost-metadata WAV is adopted; `STOP` file and hard caps |
 | Automated evaluation, gate, human review, approved-recording protection | — | Yes (Judge, gate, guard, append-only review, byte-identity checks) |
 | Delivery files | Results sheet | Two-voice delivery workbooks verified against live objects |
+
+### What runs automatically in the Python pipeline
+| Stage | Automatic or manual |
+|---|---|
+| Plan, authorize, preflight | A person starts a run with an explicit flag and confirmation phrase; the checks are automatic |
+| Read entries → text policy → generation → technical check → judge → gate → best-take selection → isolation report | One automatic chain once started |
+| Retake of a failed word | **Manual**: proposed by the failure router, planned and authorized by a person |
+| Resume of an interrupted batch | **Manual** start; nothing already done is re-sent |
+| Upload to object storage and its verification | **Manual**, separate from generation |
+| Human review and decisions | **Manual** |
+| Final acceptance | **Manual and outside the run**; no technical or model result approves a recording |
+| Two-voice rule, delivery files, verification scripts | Scripts are automatic; a person runs them |
+
+Three different outcomes: a **technical check passed** (the file is sound), a **quality gate passed** (no blocking fault found — *auto-ready*, not reviewed), and **human acceptance** (a person decided on that recording). *Isolation* is a classification in reports and review packages, not a state change or file move; nothing is deleted.
 
 ### Storage and upload (Python era)
 - **Authorization.** Uploads are a separate stage. Every command is a dry run unless an explicit flag and an exact confirmation phrase (derived from the manifest) are given.
@@ -93,7 +107,7 @@ Technical validity says nothing about the specific faults that matter for headwo
 Registry files and approved WAVs are verified byte-identical around every live stage; one generation attempt per (entry, voice) is enforced by a UNIQUE constraint; decisions are keyed by the recording's SHA-256 so they never transfer to a new take; uploads used conditional writes (no overwrite); the final export is verified by content identity against the selected local recordings.
 
 **How does production resume after partial failure?**
-Every stage records its work (WAV + metadata, judge calls) and skips it on rerun; a WAV whose metadata was lost is adopted rather than regenerated; temporary files never become final names; failures are classified and routed (bounded retake, or parked for a human); live commands need a recorded authorization, an explicit flag and an exact confirmation phrase, otherwise they are dry runs; a `STOP` file and a hard budget cap stop a stage safely.
+Every stage records its work (WAV + metadata, judge calls) and skips it on rerun; a WAV whose metadata was lost is adopted rather than regenerated; temporary files never become final names; failures are classified and routed (a retake may be proposed within a class ceiling, but a person plans and authorizes it; otherwise the word is parked); live commands need a recorded authorization, an explicit flag and an exact confirmation phrase, otherwise they are dry runs; a `STOP` file and a hard budget cap stop a stage safely.
 
 **Why did the guard become advisory?**
 The repeated-error guard protected quality but stopped legitimate production. Detection and isolation were kept; only technical, budget and data-integrity problems stop a run, and `strict` mode remains available.

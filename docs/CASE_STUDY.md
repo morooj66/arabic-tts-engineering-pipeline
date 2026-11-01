@@ -88,7 +88,7 @@ Each challenge is written as problem → discovery → options → decision → 
 | Pin every config by hash; mismatch stops the run | Reproducibility; "nothing changes them automatically" |
 | Fix text policy, not prompt | Prompt experiments lost to take-to-take variance |
 | Judge = evidence; human = approval | Judge false-pass rate unproven; human labels noisy too |
-| Isolate, never delete or auto-retry beyond a class ceiling | Auditability; bounded cost (retry policy: at most 3 attempts, fewer for some fault classes) |
+| Isolate, never delete; no automatic retry — retakes are planned and authorized within a class ceiling | Auditability; bounded cost (retry policy: at most 3 attempts per key, fewer for some fault classes) |
 | Two-voice delivery rule | A word with one voice is not shippable |
 | Verify by content identity | URLs can be right while content is wrong |
 
@@ -108,7 +108,7 @@ Reviewers listen blind to the verdict where policy requires it, record one decis
 
 - Each stage resumes; recorded work is never requested again; a WAV whose metadata was lost is adopted; temp files never become final names.
 - Live runs need a recorded authorization, an explicit flag and an exact confirmation phrase; otherwise every command is a dry run.
-- Failures are classified (technical, letter, ending vowel, shadda/madd, stop strength, extra sound, delivery) and routed: retake while the class ceiling allows, otherwise park for a human.
+- Failures are classified (technical, letter, ending vowel, shadda/madd, stop strength, extra sound, delivery) and routed: a retake may be proposed while the class ceiling allows (a person plans and authorizes it), otherwise the word is parked for a human. There is no automatic API retry: a single attempt per key, aborting after repeated failures, on authentication/rate-limit errors or at the cost cap.
 - A hard budget cap and a `STOP` file stop a stage safely.
 
 ## 10. Results & Validation
