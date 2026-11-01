@@ -17,7 +17,7 @@
 
   function build() {
     const sc = E.SCENARIOS.find((x) => x.id === $('sc').value); sim = E.simulate(sc); $('word').innerHTML = sc.lemma + '<small>synthetic word</small>';
-    const per = sim.voices.map((v, i) => v.steps.map((s) => ({ vi: i, s })));
+    const per = sim.voices.map((v, i) => [{ vi: i, s: { stage: 'input', status: 'ok' } }].concat(v.steps.map((s) => ({ vi: i, s }))));
     events = []; for (let k = 0; k < Math.max(per[0].length, per[1].length); k++) per.forEach((p) => { if (p[k]) events.push(p[k]); });
     events.push({ vi: -1, s: { stage: 'delivery', status: sim.delivered ? 'ok' : 'fail', detail: '' } });
     pos = 0; render();
@@ -56,10 +56,10 @@
     el.innerHTML = '<h3>' + d.name + '</h3><span class="tag ' + (d.mode === 'manual' ? 'man' : 'auto') + '">' + (d.mode === 'manual' ? 'Manual' : 'Automatic') + '</span><div style="margin-top:8px">' + states + '</div>' +
       '<div class="kv"><b>Production</b>' + d.prod + '<b>In this simulation</b>' + d.sim + '<b>Decisions</b><ul>' + d.why.map((w) => '<li>' + w + '</li>').join('') + '</ul></div>';
   }
-  const MSG = { policy: { ok: 'Policy applied', blocked: 'Blocked: a letter would change' }, tts: { ok: 'Synthetic tone', retry: 'Retake' }, validation: { ok: 'File checks passed', fail: 'File checks failed', failed: 'Attempts exhausted' }, evaluation: { ok: 'Judge + gate: PASS_GATE', hold: 'Judge + gate: HOLD', isolated: 'Isolated in report' }, review: { ok: 'Accepted by reviewer', fail: 'Rejected by reviewer', pending: 'Awaiting a reviewer', hold: 'Waits for a reviewer' } };
+  const MSG = { input: { ok: 'Synthetic word loaded' }, policy: { ok: 'Policy applied', blocked: 'Blocked: a letter would change' }, tts: { ok: 'Synthetic tone', retry: 'Retake' }, validation: { ok: 'File checks passed', fail: 'File checks failed', failed: 'Attempts exhausted' }, evaluation: { ok: 'Judge + gate: PASS_GATE', hold: 'Judge + gate: HOLD', isolated: 'Isolated in report' }, review: { ok: 'Accepted by reviewer', fail: 'Rejected by reviewer', pending: 'Awaiting a reviewer', hold: 'Waits for a reviewer' } };
   function log() {
     const ol = $('log'); ol.innerHTML = '';
-    if (!pos) { ol.innerHTML = '<li><span class="empty">Run the pipeline or press Step.</span></li>'; return; }
+    if (!pos) { ol.innerHTML = '<li class="idle"><span class="empty">Run the pipeline or press Step.</span></li>'; return; }
     events.slice(0, pos).forEach((e) => {
       const li = document.createElement('li'), s = e.s, delivery = e.vi < 0, status = (s.status === 'ok' || s.status === 'pending' || s.status === 'hold' ? s.status : s.status);
       const cls = s.status === 'ok' ? 's-passed' : (['pending', 'hold'].includes(s.status) && s.stage === 'review' ? 's-manual' : (s.status === 'retry' ? 's-manual' : 's-failed'));
