@@ -42,7 +42,7 @@
   const POLICY = { voice_a: 'waqf (end of word only)', voice_b: 'verbatim' };
 
   function simulateVoice(voice, cfg) {
-    const steps = [], add = (stage, status, detail) => steps.push({ stage, status, detail });
+    const steps = [], add = (stage, status, detail, extra) => steps.push(Object.assign({ stage, status, detail }, extra || {}));
     add('policy', 'ok', 'Policy: ' + POLICY[voice] + '. Dictionary text is never changed; only marks may differ.');
     if (cfg.letterChange) {
       add('policy', 'blocked', 'Letters-preserved check failed: the prepared text would change a letter. The text is blocked and never sent to the provider.');
@@ -51,7 +51,7 @@
     const attempts = cfg.attempts || [{ faults: [] }]; let slot = { blocked: false, recorded: false, gate: null };
     for (let n = 1; n <= MAX_ATTEMPTS; n++) {
       const at = attempts[Math.min(n - 1, attempts.length - 1)];
-      add('tts', 'ok', 'Attempt ' + n + ': synthetic tone generated (no model is called).');
+      add('tts', 'ok', 'Attempt ' + n + ': synthetic tone generated (no model is called).', { attempt: n });
       const technicalOk = at.technicalOk !== false;
       if (!technicalOk) {
         add('validation', 'fail', 'Attempt ' + n + ': technical check failed (L0 / format).');
@@ -62,10 +62,10 @@
       const g = gate(at.faults || [], { endsLong: false });
       const why = g.hard.concat(g.soft).join(', ') || 'no findings';
       if (g.status === 'PASS_GATE') {
-        add('evaluation', 'ok', 'Judge A/B + gate: PASS_GATE (score ' + g.score + ', ' + why + '). Evidence, not approval.');
+        add('evaluation', 'ok', 'Judge A/B + gate: PASS_GATE (score ' + g.score + ', ' + why + '). Evidence, not approval.', { attempt: n, gate: g });
         slot = { blocked: false, recorded: true, gate: 'PASS_GATE' }; break;
       }
-      add('evaluation', 'hold', 'Judge A/B + gate: HOLD (' + why + '; score ' + g.score + ').');
+      add('evaluation', 'hold', 'Judge A/B + gate: HOLD (' + why + '; score ' + g.score + ').', { attempt: n, gate: g });
       slot = { blocked: false, recorded: true, gate: 'HOLD' };
       if (n < MAX_ATTEMPTS) add('tts', 'retry', 'Retake (simulation shortcut: in production a person plans and authorizes it).'); else add('evaluation', 'isolated', 'No passing take: the recording is ISOLATED (kept, never deleted, not retried automatically).');
     }

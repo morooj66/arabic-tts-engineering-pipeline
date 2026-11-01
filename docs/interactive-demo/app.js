@@ -1,40 +1,92 @@
 (function () {
-  const E = window.PipelineEngine, $ = (id) => document.getElementById(id), D = 'https://github.com/morooj66/arabic-tts-engineering-pipeline/blob/main/docs/';
-  const STAGES = [
-    { id: 'input', name: 'Arabic Input', sub: 'diacritized text', does: 'Reads an entry (id + fully diacritized text) and refuses input that cannot be spoken reliably.', decisions: ['Undiacritized Arabic is routed to linguistic review instead of being guessed.', 'Stable identifiers make every later step idempotent and resumable.'], link: 'ARCHITECTURE.md' },
-    { id: 'policy', name: 'Text Policy', sub: 'pausal · exceptions', does: 'Decides what text is sent to the TTS: pausal (waqf) form for one voice, verbatim for the other, plus narrow per-word overrides.', decisions: ['The end of a headword is where TTS fails (tanween, leaked vowels), so the fix lives in the input policy, not the prompt.', 'A letters-preserved check blocks any change except marks and one allow-listed swap; blocked text is never sent.'], link: 'CASE_STUDY.md' },
-    { id: 'tts', name: 'TTS Generation', sub: 'pinned config', does: 'Requests one recording per (entry, voice) with a pinned, hash-checked configuration.', decisions: ['A unique attempt per key plus a bounded retake ceiling keeps cost predictable.', 'Output is non-deterministic, so one good take proves little; seeds/temperature did not help.'], link: 'ARCHITECTURE.md' },
-    { id: 'validation', name: 'Audio Validation', sub: 'L0 / L1', does: 'Checks container, format, duration, energy and clipping before any judge call is spent.', decisions: ['Cheap, deterministic checks first; failures are classified and retried within bounds.', 'Technical validity says nothing about pronunciation.'], link: 'QUALITY_ASSURANCE.md' },
-    { id: 'evaluation', name: 'Automated Evaluation', sub: 'judge A/B → gate', does: 'A two-pass judge reports what it heard and answers targeted yes/no questions; a rule-based gate turns that into PASS_GATE or HOLD.', decisions: ['The judge sees audio only and is evidence, never approval.', 'Hard faults block; soft risks add weighted points; the threshold was frozen from development data.', 'HOLD means isolated: kept, never deleted, never retried automatically.'], link: 'CASE_STUDY.md' },
-    { id: 'review', name: 'Human Review', sub: 'append-only', does: 'People listen and decide per recording; a later decision supersedes by reference.', decisions: ['Decisions are bound to the recording\'s SHA-256, so they never transfer to a new take.', 'A human decision overrides the gate in both directions.'], link: 'CASE_STUDY.md' },
-    { id: 'delivery', name: 'Delivery', sub: 'two-voice rule', does: 'Ships a word only when both voices are valid, keeps human-accepted and auto-ready counters apart, exports the import file and verifies it.', decisions: ['Production completion is not human approval.', 'Verify by content identity (size, hash), not by URL.'], link: 'ARCHITECTURE.md' }
-  ];
-  const rail = $('rail'), stage = $('stage'); let sel = 0;
-  STAGES.forEach((s, i) => { const b = document.createElement('button'); b.setAttribute('aria-pressed', 'false'); b.innerHTML = (i + 1) + '. ' + s.name + '<small>' + s.sub + '</small>'; b.onclick = () => showStage(i); rail.appendChild(b); });
-  function showStage(i) {
-    sel = i; [...rail.children].forEach((b, j) => b.setAttribute('aria-pressed', String(j === i))); const s = STAGES[i];
-    stage.innerHTML = '<h2>' + (i + 1) + '. ' + s.name + '</h2><p>' + s.does + '</p><b>Engineering decisions</b><ul>' + s.decisions.map((d) => '<li>' + d + '</li>').join('') + '</ul><a href="' + D + s.link + '">Read more →</a>';
-    highlight(s.id);
+  const E = window.PipelineEngine, $ = (id) => document.getElementById(id);
+  const ST = ['input', 'policy', 'tts', 'validation', 'j1', 'gate', 'review', 'delivery'];
+  const LABEL = { pending: 'Pending', running: 'Running', passed: 'Passed', failed: 'Failed', manual: 'Manual Review' };
+  const STAGES = {
+    input: { name: 'Arabic Input', mode: 'auto', prod: 'Reads fully diacritized entries; undiacritized text is excluded.', sim: 'A synthetic word, always valid.', why: ['Stable ids make every later step resumable.'] },
+    policy: { name: 'Text Policy', mode: 'auto', prod: 'Waqf (male) or verbatim (female) text, per-word exceptions, inner-letter check.', sim: 'A scenario can force a letter change, which blocks the request.', why: ['Fix the input policy, not the prompt.', 'Blocked text is never sent.'] },
+    tts: { name: 'TTS Generation', mode: 'auto', prod: 'Gemini TTS, one attempt per key. No automatic API retry.', sim: 'A synthetic tone. The retake shown is a shortcut: in production a person plans and authorizes it.', why: ['Output is non-deterministic: one good take proves little.'] },
+    validation: { name: 'L0/L1 Validation', mode: 'auto', prod: 'L0 file and format check, L1 acoustic flags.', sim: 'Pass or fail is set by the scenario.', why: ['Cheap deterministic checks before any judge call.'] },
+    j1: { name: 'J1 Evaluation', mode: 'auto', prod: 'Two-pass judge on audio only. Evidence, not approval.', sim: 'Faults are injected by the scenario. No model is called.', why: ['The judge never approves.'] },
+    gate: { name: 'Quality Gate', mode: 'auto', prod: 'Hard faults block, soft risks add points: PASS_GATE or HOLD. Best take is selected; isolation is a report classification, not a deletion or move.', sim: 'Same rules as the reference gate (score ≤ 2).', why: ['PASS_GATE is not human approval.', 'Nothing is deleted.'] },
+    review: { name: 'Human Review', mode: 'manual', prod: 'A person decides per recording; acceptance happens outside the run.', sim: 'The scenario supplies accept, reject or no decision.', why: ['A human decision overrides the gate.'] },
+    delivery: { name: 'Delivery', mode: 'manual', prod: 'Two valid voices per word. Files are built and verified by scripts a person runs; upload is a separate authorized tool.', sim: 'Pair complete or not. Upload is not simulated.', why: ['Delivered is not the same as approved.'] }
+  };
+  const V = ['voice_a', 'voice_b'], VN = ['M', 'F'], VNAME = ['Male', 'Female'];
+  let sim = null, events = [], pos = 0, timer = null, sel = 'gate';
+
+  function build() {
+    const sc = E.SCENARIOS.find((x) => x.id === $('sc').value); sim = E.simulate(sc); $('word').innerHTML = sc.lemma + '<small>synthetic word</small>';
+    const per = sim.voices.map((v, i) => v.steps.map((s) => ({ vi: i, s })));
+    events = []; for (let k = 0; k < Math.max(per[0].length, per[1].length); k++) per.forEach((p) => { if (p[k]) events.push(p[k]); });
+    events.push({ vi: -1, s: { stage: 'delivery', status: sim.delivered ? 'ok' : 'fail', detail: '' } });
+    pos = 0; render();
   }
-  const sc = $('sc'); E.SCENARIOS.forEach((s) => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.title; sc.appendChild(o); });
-  let sim = null, shown = 0, flat = [];
-  function load() {
-    const s = E.SCENARIOS.find((x) => x.id === sc.value); sim = E.simulate(s); $('blurb').textContent = s.blurb; $('lemma').textContent = s.lemma;
-    flat = []; sim.voices.forEach((v, vi) => v.steps.forEach((st) => flat.push({ vi, st }))); shown = 0; render();
+  function stateAt(n) {
+    const st = V.map(() => Object.fromEntries(ST.map((k) => [k, 'pending']))), info = V.map(() => ({ attempts: 0, gate: null, retry: false, isolated: false })); let delivery = 'pending';
+    for (let i = 0; i < n; i++) {
+      const { vi, s } = events[i]; if (vi < 0) { delivery = s.status === 'ok' ? 'passed' : 'failed'; continue; }
+      const m = st[vi], f = info[vi]; m.input = 'passed';
+      if (s.stage === 'policy') m.policy = s.status === 'ok' ? 'passed' : 'failed';
+      else if (s.stage === 'tts') { if (s.status === 'ok') { m.tts = 'passed'; f.attempts = s.attempt || f.attempts; } else { ['tts', 'validation', 'j1', 'gate'].forEach((k) => { m[k] = 'pending'; }); f.retry = true; } }
+      else if (s.stage === 'validation') m.validation = s.status === 'ok' ? 'passed' : 'failed';
+      else if (s.stage === 'evaluation') { if (s.gate) { m.j1 = 'passed'; m.gate = s.gate.status === 'PASS_GATE' ? 'passed' : 'failed'; f.gate = s.gate; } else { m.gate = 'failed'; f.isolated = true; } }
+      else if (s.stage === 'review') m.review = s.status === 'ok' ? 'passed' : (s.status === 'fail' ? 'failed' : 'manual');
+    }
+    if (n >= events.length) { V.forEach((v, i) => { if (sim.voices[i].slot.recorded === false && st[i].review === 'pending') st[i].review = 'pending'; }); }
+    const running = V.map(() => null); if (n < events.length) for (let j = n; j < events.length; j++) { const e = events[j]; if (e.vi >= 0 && running[e.vi] === null) running[e.vi] = e.s.stage === 'evaluation' ? 'j1' : e.s.stage; }
+    running.forEach((r, i) => { if (r && st[i][r] === 'pending') st[i][r] = 'running'; });
+    return { st, info, delivery, running };
   }
+  function chip(label, state) { return '<div class="chip s-' + state + '">' + (label ? '<u>' + label + '</u>' : '') + '<i class="dot"></i>' + LABEL[state] + '</div>'; }
   function render() {
-    ['va', 'vb'].forEach((id, vi) => {
-      const el = $(id); el.innerHTML = '';
-      flat.slice(0, shown).filter((x) => x.vi === vi).forEach((x) => { const d = document.createElement('div'); d.className = 'step ' + x.st.status; d.innerHTML = '<b></b><span></span>'; d.firstChild.textContent = x.st.stage; d.lastChild.textContent = x.st.detail; el.appendChild(d); });
-      if (shown >= flat.length) { const t = document.createElement('div'); t.innerHTML = 'Final slot: <span class="tag t-' + sim.voices[vi].category + '">' + sim.voices[vi].category + '</span>'; el.appendChild(t); }
+    const S = stateAt(pos), pipe = $('pipe'); pipe.innerHTML = '';
+    ST.forEach((k) => {
+      const d = STAGES[k], b = document.createElement('button'); b.className = 'node' + (d.mode === 'manual' ? ' manual' : ''); b.setAttribute('aria-pressed', String(sel === k));
+      const body = k === 'delivery' ? chip('', S.delivery === 'pending' ? 'pending' : S.delivery) : chip('M', S.st[0][k]) + chip('F', S.st[1][k]);
+      b.innerHTML = '<i>' + (d.mode === 'manual' ? 'MANUAL' : 'AUTO') + '</i><b>' + d.name + '</b>' + body; b.onclick = () => { sel = k; render(); }; pipe.appendChild(b);
     });
-    const done = shown >= flat.length, out = $('outcome'); out.textContent = done ? sim.summary : ''; out.className = 'result ' + (done ? (sim.delivered ? 'good' : 'bad') : '');
-    $('next').disabled = done;
-    const last = flat[Math.max(0, shown - 1)]; if (last && shown) highlight(last.st.stage);
+    side(S); log(); cards(S);
+    const done = pos >= events.length; $('step').disabled = done || !!timer; $('run').disabled = done || !!timer;
+    const vd = $('verdict'); vd.textContent = done ? sim.summary : ''; vd.className = 'verdict ' + (done ? (sim.delivered ? 'good' : 'bad') : '');
   }
-  function highlight(id) { const i = STAGES.findIndex((s) => s.id === id); if (i >= 0) [...rail.children].forEach((b, j) => { b.style.outline = j === i ? '2px dashed var(--acc)' : 'none'; }); }
-  $('next').onclick = () => { shown = Math.min(flat.length, shown + 1); render(); };
-  $('all').onclick = () => { shown = flat.length; render(); };
-  $('reset').onclick = () => { shown = 0; render(); };
-  sc.onchange = load; showStage(0); load();
+  function side(S) {
+    const d = STAGES[sel], m = S.st[0][sel] || S.delivery, el = $('side');
+    const states = sel === 'delivery' ? chip('', S.delivery) : chip('Male', S.st[0][sel]).replace('chip ','chip w ') + chip('Female', S.st[1][sel]).replace('chip ','chip w ');
+    el.innerHTML = '<h3>' + d.name + '</h3><span class="tag ' + (d.mode === 'manual' ? 'man' : 'auto') + '">' + (d.mode === 'manual' ? 'Manual' : 'Automatic') + '</span><div style="margin-top:8px">' + states + '</div>' +
+      '<div class="kv"><b>Production</b>' + d.prod + '<b>In this simulation</b>' + d.sim + '<b>Decisions</b><ul>' + d.why.map((w) => '<li>' + w + '</li>').join('') + '</ul></div>';
+  }
+  const MSG = { policy: { ok: 'Policy applied', blocked: 'Blocked: a letter would change' }, tts: { ok: 'Synthetic tone', retry: 'Retake' }, validation: { ok: 'File checks passed', fail: 'File checks failed', failed: 'Attempts exhausted' }, evaluation: { ok: 'Judge + gate: PASS_GATE', hold: 'Judge + gate: HOLD', isolated: 'Isolated in report' }, review: { ok: 'Accepted by reviewer', fail: 'Rejected by reviewer', pending: 'Awaiting a reviewer', hold: 'Waits for a reviewer' } };
+  function log() {
+    const ol = $('log'); ol.innerHTML = '';
+    if (!pos) { ol.innerHTML = '<li><span class="empty">Run the pipeline or press Step.</span></li>'; return; }
+    events.slice(0, pos).forEach((e) => {
+      const li = document.createElement('li'), s = e.s, delivery = e.vi < 0, status = (s.status === 'ok' || s.status === 'pending' || s.status === 'hold' ? s.status : s.status);
+      const cls = s.status === 'ok' ? 's-passed' : (['pending', 'hold'].includes(s.status) && s.stage === 'review' ? 's-manual' : (s.status === 'retry' ? 's-manual' : 's-failed'));
+      const msg = delivery ? (s.status === 'ok' ? 'Pair complete: delivered' : 'Pair incomplete: not delivered') : ((MSG[s.stage] || {})[s.status] || s.status) + (s.attempt ? ' · attempt ' + s.attempt : '') + (s.gate ? ' · score ' + s.gate.score : '');
+      li.innerHTML = '<span class="v">' + (delivery ? '' : VN[e.vi]) + '</span><span class="st ' + cls + '">' + (delivery ? 'Delivery' : STAGES[s.stage === 'evaluation' ? 'gate' : s.stage].name) + '</span><span>' + msg + (s.status === 'retry' ? '<span class="sim">simulation shortcut</span>' : '') + '</span>';
+      ol.appendChild(li);
+    }); ol.scrollTop = ol.scrollHeight;
+  }
+  function cards(S) {
+    const done = pos >= events.length, c = $('cards'), cat = (i) => (done ? sim.voices[i].category : null);
+    const two = (k) => chip('M', S.st[0][k]) + chip('F', S.st[1][k]);
+    const gateTxt = (i) => (S.info[i].gate ? (S.info[i].gate.status + ' · ' + S.info[i].gate.score) : '—');
+    const html = [
+      ['Technical Validation', two('validation'), 'L0/L1 file checks'],
+      ['Automated Evaluation', two('j1'), 'Evidence, not approval'],
+      ['Quality Gate', '<div class="chip"><u>M</u>' + gateTxt(0) + '</div><div class="chip"><u>F</u>' + gateTxt(1) + '</div>', S.info.some((x) => x.isolated) ? 'Isolated = report label' : 'Max score 2'],
+      ['Human Review', two('review'), 'Manual · outside the run'],
+      ['Delivery Status', done ? '<div class="big ' + (sim.delivered ? 's-passed' : 's-failed') + '">' + (sim.delivered ? 'Delivered' : 'Not delivered') + '</div>' : chip('', 'pending'), done ? (cat(0) + ' / ' + cat(1)).replace(/_/g, ' ').toLowerCase() : 'Both voices must be valid']
+    ];
+    c.innerHTML = html.map((h) => '<div class="res"><h4>' + h[0] + '</h4>' + h[1] + '<div class="sub">' + h[2] + '</div></div>').join('');
+  }
+  function advance() { if (pos < events.length) { pos++; render(); } }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  E.SCENARIOS.forEach((s) => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.title; $('sc').appendChild(o); });
+  $('sc').onchange = () => { stop(); build(); };
+  $('step').onclick = advance;
+  $('run').onclick = () => { if (timer || pos >= events.length) return; render(); timer = setInterval(() => { advance(); if (pos >= events.length) { stop(); render(); } }, 650); render(); };
+  $('reset').onclick = () => { stop(); pos = 0; render(); };
+  build();
 })();
