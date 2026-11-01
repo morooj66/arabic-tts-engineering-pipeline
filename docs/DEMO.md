@@ -1,8 +1,10 @@
 # Offline Demo
 
-[← Back to README](../README.md#demo) · [Architecture](ARCHITECTURE.md) · [Workflow](WORKFLOW.md) · [Quality Assurance](QUALITY_ASSURANCE.md)
+[← Back to README](../README.md#9-synthetic-demo) · [Architecture](ARCHITECTURE.md) · [Workflow](WORKFLOW.md) · [Quality Assurance](QUALITY_ASSURANCE.md)
 
 > **Synthetic Demo Data:** this walkthrough uses the four public fixtures in `examples/sample_entries.csv`. Output WAV files are deterministic tones, not Arabic speech.
+
+This page is the command-line walkthrough. For the browser simulation see the [Interactive Engineering Demo](https://morooj66.github.io/arabic-tts-engineering-pipeline/interactive-demo/).
 
 ## Run
 

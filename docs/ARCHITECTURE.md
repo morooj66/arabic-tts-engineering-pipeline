@@ -146,7 +146,7 @@ flowchart TB
     CSV --> CLI --> INGEST --> DB
     DB --> BATCH --> PREP --> TTS --> QA
     QA --> WAV --> JSONL --> REVIEW --> DB
-    QA -. "bounded retry" .-> BATCH
+    QA -. "bounded retry (reference code only; production retakes are manual)" .-> BATCH
     DB --> REPORT
 
     classDef boundary fill:#10233f,stroke:#62e6db,color:#fff;

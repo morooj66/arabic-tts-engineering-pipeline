@@ -17,11 +17,19 @@
 </p>
 
 <p align="center">
-  <a href="#1-project-overview">Overview</a> · <a href="#3-system-architecture">Architecture</a> · <a href="#4-technology-stack--model-configuration">Stack</a> · <a href="#5-engineering-journey">Journey</a> · <a href="#9-synthetic-demo">Demo</a> · <a href="docs/CASE_STUDY.md">Case study</a>
+  <a href="#interactive-engineering-demo">Demo</a> · <a href="#1-project-overview">Overview</a> · <a href="#3-system-architecture">Architecture</a> · <a href="#4-technology-stack--model-configuration">Stack</a> · <a href="#5-engineering-journey">Journey</a> · <a href="#9-synthetic-demo">Demo</a> · <a href="docs/CASE_STUDY.md">Case study</a>
 </p>
 
 > [!IMPORTANT]
 > This repository is a public, offline **re-implementation of the engineering patterns** of a private production project. It uses synthetic data and a deterministic tone generator; the WAV files are **not Arabic speech**, and the simulated judge, gate weights and guard thresholds are illustrative. It contains none of the private project's data, recordings, prompts, configuration or code.
+
+## Interactive Engineering Demo
+
+A browser dashboard that simulates the pipeline end to end: run one of seven scenarios and watch the male and female paths move through Arabic Input → Text Policy → TTS Generation → L0/L1 Validation → J1 Evaluation → Quality Gate → Human Review → Delivery, with manual stages shown differently from automatic ones.
+
+<p align="center"><a href="https://morooj66.github.io/arabic-tts-engineering-pipeline/interactive-demo/"><b>▶ Launch Interactive Demo</b></a></p>
+
+It runs entirely in your browser on synthetic data: it does not call Gemini or any API, and it shows no production recordings.
 
 ## 1. Project Overview
 
@@ -109,11 +117,9 @@ For this repository's **synthetic** suite: 34 Python and 9 JavaScript offline te
 
 ## 9. Synthetic Demo
 
-### Interactive Pipeline Explorer
+The browser demo is described [above](#interactive-engineering-demo) (source in [`docs/interactive-demo/`](docs/interactive-demo/)).
 
-A zero-dependency HTML/CSS/JavaScript dashboard: run a scenario and watch the male and female paths move through each stage (Pending / Running / Passed / Failed / Manual Review), with manual stages drawn differently from automatic ones; click a stage (Arabic Input → Text Policy → TTS Generation → Audio Validation → Automated Evaluation → Human Review → Delivery) to see its purpose and engineering decisions, then step through seven synthetic scenarios (ready for delivery, gate failure and retake, isolation, awaiting the reviewer, reviewer rejection, technical failure, policy block). The simulator applies the same rules as the reference code — a parity test checks it against the Python gate. **It is a Synthetic Interactive Simulation: no Gemini call, no audio, no network.** **Live demo: https://morooj66.github.io/arabic-tts-engineering-pipeline/interactive-demo/** (source in [`docs/interactive-demo/`](docs/interactive-demo/)).
-
-### Command-line demos
+### Command-line examples
 
 ```bash
 git clone https://github.com/morooj66/arabic-tts-engineering-pipeline.git && cd arabic-tts-engineering-pipeline
@@ -124,8 +130,6 @@ make demo-two-voice       # policy → simulated judge → gate → guard → re
 
 The two-voice demo processes 12 synthetic entries with injected faults and writes `delivery_two_voice.csv`, `incomplete_words.csv`, `platform_tasks.csv` (7-column contract, `example.invalid` URLs), `review_log.jsonl` and a guard log. Use `--guard-mode strict` to see the original stop-on-trip behaviour.
 
-<p align="center"><img src="assets/demo.gif" alt="Offline CLI demo processing synthetic entries" width="760"></p>
-
 ## 10. Documentation
 
 | Document | Covers |
@@ -133,7 +137,7 @@ The two-voice demo processes 12 synthetic entries with injected faults and write
 | [Case study](docs/CASE_STUDY.md) | Journey, experiments, challenges, decisions, lessons — with evidence and limits |
 | [Architecture & decisions](docs/ARCHITECTURE.md) | Mermaid flow, stage contracts, Production / Experimental / Legacy |
 | [Results](docs/RESULTS.md) | What is and is not claimed |
-| [Interactive explorer](docs/interactive-demo/index.html) · [Workflow](docs/WORKFLOW.md) · [Demo](docs/DEMO.md) | Status transitions; reproducible runs |
+| [Interactive demo](https://morooj66.github.io/arabic-tts-engineering-pipeline/interactive-demo/) · [Workflow](docs/WORKFLOW.md) · [CLI walkthrough](docs/DEMO.md) | Browser simulation; status transitions; reproducible command-line runs |
 | [Quality assurance](docs/QUALITY_ASSURANCE.md) | Checks, test scope, limits |
 | [Public re-implementation](docs/PUBLIC_REIMPLEMENTATION.md) | Retained, simplified and omitted |
 
